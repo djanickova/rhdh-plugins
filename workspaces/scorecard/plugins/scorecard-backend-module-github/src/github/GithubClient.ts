@@ -77,4 +77,56 @@ export class GithubClient {
 
     return response.repository.pullRequests.totalCount;
   }
+
+  /**
+   * Sanitize a string to be a valid GraphQL alias.
+   * eg. "github.files_check.readme-correct" -> "github_files_check_readme_correct"
+   */
+  private sanitizeGraphQLAlias(alias: string): string {
+    return alias.replace(/[^_0-9A-Za-z]/g, '_');
+  }
+
+  async checkFilesExist(
+    url: string,
+    repository: GithubRepository,
+    files: Map<string, string>,
+  ): Promise<Map<string, boolean>> {
+    const octokit = await this.getOctokitClient(url);
+
+    // Map sanitized aliases back to original metric IDs
+    const aliasToMetricId = new Map<string, string>();
+    for (const [metricId] of files) {
+      const sanitizedAlias = this.sanitizeGraphQLAlias(metricId);
+      aliasToMetricId.set(sanitizedAlias, metricId);
+    }
+
+    const fileChecks = Array.from(files.entries())
+      .map(([metricId, path]) => {
+        const sanitizedAlias = this.sanitizeGraphQLAlias(metricId);
+        return `${sanitizedAlias}: object(expression: "HEAD:${path}") { id }`;
+      })
+      .join('\n');
+
+    const query = `
+    query checkFilesExist($owner: String!, $repo: String!) {
+      repository(owner: $owner, name: $repo) {
+        ${fileChecks}
+      }
+    }
+  `;
+
+    const response = await octokit<{
+      repository: Record<string, { id: string } | null>;
+    }>(query, {
+      owner: repository.owner,
+      repo: repository.repo,
+    });
+
+    // Map results back to original metric IDs
+    const results = new Map<string, boolean>();
+    for (const [sanitizedAlias, metricId] of aliasToMetricId) {
+      results.set(metricId, response.repository[sanitizedAlias] !== null);
+    }
+    return results;
+  }
 }

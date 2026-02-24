@@ -52,3 +52,14 @@ export const DEFAULT_NUMBER_THRESHOLDS: ThresholdConfig = {
     { key: 'error', expression: '>50' },
   ],
 };
+
+/**
+ * Default threshold configuration for boolean metrics
+ * @public
+ */
+export const DEFAULT_BOOLEAN_THRESHOLDS: ThresholdConfig = {
+  rules: [
+    { key: 'success', expression: '==true' },
+    { key: 'error', expression: '==false' },
+  ],
+};
