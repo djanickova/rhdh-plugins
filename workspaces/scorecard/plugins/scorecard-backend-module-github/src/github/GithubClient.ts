@@ -93,19 +93,17 @@ export class GithubClient {
   ): Promise<Map<string, boolean>> {
     const octokit = await this.getOctokitClient(url);
 
-    // Map sanitized aliases back to original metric IDs
     const aliasToMetricId = new Map<string, string>();
-    for (const [metricId] of files) {
-      const sanitizedAlias = this.sanitizeGraphQLAlias(metricId);
-      aliasToMetricId.set(sanitizedAlias, metricId);
-    }
+    const fileChecksParts: string[] = [];
 
-    const fileChecks = Array.from(files.entries())
-      .map(([metricId, path]) => {
-        const sanitizedAlias = this.sanitizeGraphQLAlias(metricId);
-        return `${sanitizedAlias}: object(expression: "HEAD:${path}") { id }`;
-      })
-      .join('\n');
+    for (const [metricId, path] of files) {
+      const sanitizedAlias = this.sanitizeGraphQLAlias(metricId);
+      
+      aliasToMetricId.set(sanitizedAlias, metricId);
+      fileChecksParts.push(`${sanitizedAlias}: object(expression: "HEAD:${path}") { id }`);
+    }
+    
+    const fileChecks = fileChecksParts.join('\n');
 
     const query = `
     query checkFilesExist($owner: String!, $repo: String!) {
