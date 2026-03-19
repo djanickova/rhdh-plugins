@@ -85,23 +85,23 @@ export class MetricProvidersRegistry {
     }
   }
 
-  getProvider(providerId: string): MetricProvider {
-    const metricProvider = this.metricProviders.get(providerId);
+  getProvider(metricId: string): MetricProvider {
+    const metricProvider = this.metricProviders.get(metricId);
     if (!metricProvider) {
       throw new NotFoundError(
-        `Metric provider with ID '${providerId}' is not registered.`,
+        `No metric provider registered for metric ID '${metricId}'.`,
       );
     }
     return metricProvider;
   }
 
-  getMetric(providerId: string): Metric {
-    const provider = this.getProvider(providerId);
+  getMetric(metricId: string): Metric {
+    const provider = this.getProvider(metricId);
 
     // For batch providers, find the specific metric by ID
     if (provider.getMetrics) {
       const metrics = provider.getMetrics();
-      const metric = metrics.find(m => m.id === providerId);
+      const metric = metrics.find(m => m.id === metricId);
       if (metric) {
         return metric;
       }
@@ -111,26 +111,26 @@ export class MetricProvidersRegistry {
   }
 
   async calculateMetric(
-    providerId: string,
+    metricId: string,
     entity: Entity,
   ): Promise<MetricValue> {
-    return this.getProvider(providerId).calculateMetric(entity);
+    return this.getProvider(metricId).calculateMetric(entity);
   }
 
   async calculateMetrics(
-    providerIds: string[],
+    metricIds: string[],
     entity: Entity,
-  ): Promise<{ providerId: string; value?: MetricValue; error?: Error }[]> {
+  ): Promise<{ metricId: string; value?: MetricValue; error?: Error }[]> {
     const results = await Promise.allSettled(
-      providerIds.map(providerId => this.calculateMetric(providerId, entity)),
+      metricIds.map(metricId => this.calculateMetric(metricId, entity)),
     );
 
     return results.map((result, index) => {
-      const providerId = providerIds[index];
+      const metricId = metricIds[index];
       if (result.status === 'fulfilled') {
-        return { providerId, value: result.value };
+        return { metricId, value: result.value };
       }
-      return { providerId, error: result.reason as Error };
+      return { metricId, error: result.reason as Error };
     });
   }
 
@@ -139,16 +139,16 @@ export class MetricProvidersRegistry {
     return [...new Set(this.metricProviders.values())];
   }
 
-  listMetrics(providerIds?: string[]): Metric[] {
-    if (providerIds && providerIds.length !== 0) {
-      return providerIds
-        .map(providerId => {
-          const provider = this.metricProviders.get(providerId);
+  listMetrics(metricIds?: string[]): Metric[] {
+    if (metricIds && metricIds.length !== 0) {
+      return metricIds
+        .map(metricId => {
+          const provider = this.metricProviders.get(metricId);
           if (!provider) return undefined;
 
           if (provider.getMetrics) {
             const metrics = provider.getMetrics();
-            return metrics.find(m => m.id === providerId);
+            return metrics.find(m => m.id === metricId);
           }
 
           return provider.getMetric();

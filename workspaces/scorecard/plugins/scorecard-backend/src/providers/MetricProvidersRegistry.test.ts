@@ -252,7 +252,7 @@ describe('MetricProvidersRegistry', () => {
     it('should throw NotFoundError for unregistered provider', () => {
       expect(() => registry.getProvider('non_existent')).toThrow(
         new NotFoundError(
-          "Metric provider with ID 'non_existent' is not registered.",
+          "No metric provider registered for metric ID 'non_existent'.",
         ),
       );
     });
@@ -273,7 +273,7 @@ describe('MetricProvidersRegistry', () => {
     it('should throw NotFoundError for unregistered provider', () => {
       expect(() => registry.getMetric('non_existent')).toThrow(
         new NotFoundError(
-          "Metric provider with ID 'non_existent' is not registered.",
+          "No metric provider registered for metric ID 'non_existent'.",
         ),
       );
     });
@@ -310,7 +310,7 @@ describe('MetricProvidersRegistry', () => {
         registry.calculateMetric('non_existent', mockEntity),
       ).rejects.toThrow(
         new NotFoundError(
-          "Metric provider with ID 'non_existent' is not registered.",
+          "No metric provider registered for metric ID 'non_existent'.",
         ),
       );
     });
@@ -334,11 +334,11 @@ describe('MetricProvidersRegistry', () => {
 
       expect(results).toHaveLength(2);
       expect(results[0]).toEqual({
-        providerId: 'github.number_metric',
+        metricId: 'github.number_metric',
         value: 42,
       });
       expect(results[1]).toEqual({
-        providerId: 'jira.boolean_metric',
+        metricId: 'jira.boolean_metric',
         value: false,
       });
     });
@@ -363,11 +363,11 @@ describe('MetricProvidersRegistry', () => {
 
       expect(results).toHaveLength(2);
       expect(results[0]).toEqual({
-        providerId: 'github.number_metric',
+        metricId: 'github.number_metric',
         value: 42,
       });
       expect(results[1]).toEqual({
-        providerId: 'github.open_issues',
+        metricId: 'github.open_issues',
         value: 10,
       });
     });
@@ -382,15 +382,15 @@ describe('MetricProvidersRegistry', () => {
 
       expect(results).toHaveLength(2);
       expect(results[0]).toEqual({
-        providerId: 'github.number_metric',
+        metricId: 'github.number_metric',
         value: 42,
       });
       expect(results[1]).toEqual({
-        providerId: 'non_existent',
+        metricId: 'non_existent',
         error: expect.any(NotFoundError),
       });
       expect(results[1].error?.message).toBe(
-        "Metric provider with ID 'non_existent' is not registered.",
+        "No metric provider registered for metric ID 'non_existent'.",
       );
     });
   });
