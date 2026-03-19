@@ -98,11 +98,13 @@ export class GithubClient {
 
     for (const [metricId, path] of files) {
       const sanitizedAlias = this.sanitizeGraphQLAlias(metricId);
-      
+
       aliasToMetricId.set(sanitizedAlias, metricId);
-      fileChecksParts.push(`${sanitizedAlias}: object(expression: "HEAD:${path}") { id }`);
+      fileChecksParts.push(
+        `${sanitizedAlias}: object(expression: "HEAD:${path}") { id }`,
+      );
     }
-    
+
     const fileChecks = fileChecksParts.join('\n');
 
     const query = `
