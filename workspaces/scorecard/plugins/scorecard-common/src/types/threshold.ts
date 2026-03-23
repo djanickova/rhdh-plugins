@@ -85,3 +85,22 @@ export const DEFAULT_BOOLEAN_THRESHOLDS: ThresholdConfig = {
     { key: 'error', expression: '==false' },
   ],
 };
+
+/**
+ * Default threshold configuration for file check metrics
+ * @public
+ */
+export const DEFAULT_FILE_CHECK_THRESHOLDS: ThresholdConfig = {
+  rules: [
+    {
+      key: 'exist',
+      expression: '==true',
+      color: ScorecardThresholdRuleColors.SUCCESS,
+    },
+    {
+      key: 'missing',
+      expression: '==false',
+      color: ScorecardThresholdRuleColors.ERROR,
+    },
+  ],
+};

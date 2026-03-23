@@ -78,6 +78,8 @@ export const scorecardMessages = {
     success: 'Success',
     warning: 'Warning',
     error: 'Error',
+    exist: 'Exists',
+    missing: 'Missing',
     noEntities: 'No entities in {{category}} state',
     entities_one: '{{count}} entity',
     entities_other: '{{count}} entities',
