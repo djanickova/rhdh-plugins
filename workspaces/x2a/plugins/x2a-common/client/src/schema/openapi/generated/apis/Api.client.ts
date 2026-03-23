@@ -31,6 +31,7 @@ import { ProjectsPostRequest } from '../models/ProjectsPostRequest.model';
 import { ProjectsProjectIdCollectArtifactsPost200Response } from '../models/ProjectsProjectIdCollectArtifactsPost200Response.model';
 import { ProjectsProjectIdCollectArtifactsPostRequest } from '../models/ProjectsProjectIdCollectArtifactsPostRequest.model';
 import { ProjectsProjectIdDelete200Response } from '../models/ProjectsProjectIdDelete200Response.model';
+import { ProjectsProjectIdModulesModuleIdCancelPostRequest } from '../models/ProjectsProjectIdModulesModuleIdCancelPostRequest.model';
 import { ProjectsProjectIdModulesModuleIdRunPostRequest } from '../models/ProjectsProjectIdModulesModuleIdRunPostRequest.model';
 import { ProjectsProjectIdModulesPostRequest } from '../models/ProjectsProjectIdModulesPostRequest.model';
 import { ProjectsProjectIdRunPost200Response } from '../models/ProjectsProjectIdRunPost200Response.model';
@@ -88,6 +89,9 @@ export type ProjectsProjectIdCollectArtifactsPost = {
     moduleId?: string;
     phase: MigrationPhase;
   };
+  header: {
+    xCallbackSignature: string;
+  };
 };
 /**
  * @public
@@ -108,10 +112,31 @@ export type ProjectsProjectIdGet = {
 /**
  * @public
  */
+export type ProjectsProjectIdLogGet = {
+  path: {
+    projectId: string;
+  };
+  query: {
+    streaming?: boolean;
+  };
+};
+/**
+ * @public
+ */
 export type ProjectsProjectIdModulesGet = {
   path: {
     projectId: string;
   };
+};
+/**
+ * @public
+ */
+export type ProjectsProjectIdModulesModuleIdCancelPost = {
+  path: {
+    projectId: string;
+    moduleId: string;
+  };
+  body: ProjectsProjectIdModulesModuleIdCancelPostRequest;
 };
 /**
  * @public
@@ -234,10 +259,11 @@ export class DefaultApiClient {
   }
 
   /**
-   * Callback endpoint for X2Ansible jobs to submit execution artifacts and results. This endpoint is called by the X2Ansible job runner when a migration phase completes.
+   * Callback endpoint for X2Ansible jobs to submit execution artifacts and results. This endpoint is called by the X2Ansible job runner when a migration phase completes.  Authentication: Requires HMAC-SHA256 signature in X-Callback-Signature header. The signature is computed as: HMAC-SHA256(callbackToken, raw_request_body)  Replay attack prevention: Jobs are only accepted within 3 hours of job creation time (based on job.startedAt)
    * Collects artifacts from a completed X2Ansible job
    * @param projectId - UUID of the project
    * @param phase - Migration phase that completed
+   * @param xCallbackSignature - HMAC-SHA256(callbackToken, raw_request_body) as hex string
    * @param projectsProjectIdCollectArtifactsPostRequest -
    * @param moduleId - UUID of the module. - Required for analyze, migrate, and publish phases - Should be omitted for init phase
    */
@@ -257,6 +283,7 @@ export class DefaultApiClient {
 
     return await this.fetchApi.fetch(`${baseUrl}${uri}`, {
       headers: {
+        ...request.header,
         'Content-Type': 'application/json',
         ...(options?.token && { Authorization: `Bearer ${options?.token}` }),
       },
@@ -318,6 +345,34 @@ export class DefaultApiClient {
   }
 
   /**
+   * Returns logs for the init phase
+   * @param projectId - Project UUID
+   * @param streaming - Whether to stream logs (text/plain) or return all at once
+   */
+  public async projectsProjectIdLogGet(
+    // @ts-ignore
+    request: ProjectsProjectIdLogGet,
+    options?: RequestOptions,
+  ): Promise<TypedResponse<string>> {
+    const baseUrl = await this.discoveryApi.getBaseUrl(pluginId);
+
+    const uriTemplate = `/projects/{projectId}/log{?streaming}`;
+
+    const uri = parser.parse(uriTemplate).expand({
+      projectId: request.path.projectId,
+      ...request.query,
+    });
+
+    return await this.fetchApi.fetch(`${baseUrl}${uri}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options?.token && { Authorization: `Bearer ${options?.token}` }),
+      },
+      method: 'GET',
+    });
+  }
+
+  /**
    * Returns a list of modules for a project
    * @param projectId -
    */
@@ -340,6 +395,36 @@ export class DefaultApiClient {
         ...(options?.token && { Authorization: `Bearer ${options?.token}` }),
       },
       method: 'GET',
+    });
+  }
+
+  /**
+   * Cancels a migration phase for a specific module. It deletes the corresponding job and does a clean-up.
+   * @param projectId -
+   * @param moduleId -
+   * @param projectsProjectIdModulesModuleIdCancelPostRequest -
+   */
+  public async projectsProjectIdModulesModuleIdCancelPost(
+    // @ts-ignore
+    request: ProjectsProjectIdModulesModuleIdCancelPost,
+    options?: RequestOptions,
+  ): Promise<TypedResponse<void>> {
+    const baseUrl = await this.discoveryApi.getBaseUrl(pluginId);
+
+    const uriTemplate = `/projects/{projectId}/modules/{moduleId}/cancel`;
+
+    const uri = parser.parse(uriTemplate).expand({
+      projectId: request.path.projectId,
+      moduleId: request.path.moduleId,
+    });
+
+    return await this.fetchApi.fetch(`${baseUrl}${uri}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options?.token && { Authorization: `Bearer ${options?.token}` }),
+      },
+      method: 'POST',
+      body: JSON.stringify(request.body),
     });
   }
 

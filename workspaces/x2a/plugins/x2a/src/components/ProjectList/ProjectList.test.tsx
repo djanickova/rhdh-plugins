@@ -19,6 +19,26 @@ jest.mock('../../hooks/useTranslation', () => ({
   useTranslation: mockUseTranslation,
 }));
 
+jest.mock('@backstage/core-plugin-api', () => ({
+  ...jest.requireActual('@backstage/core-plugin-api'),
+  useRouteRef: require('../../test-utils/mockRouteRef').mockUseRouteRef,
+}));
+
+jest.mock('../../hooks/useBulkRun', () => ({
+  useBulkRun: () => ({
+    runAllForProject: jest.fn(),
+    runAllGlobal: jest.fn(),
+  }),
+}));
+
+jest.mock('../../hooks/useProjectWriteAccess', () => ({
+  useProjectWriteAccess: () => ({
+    loading: false,
+    hasAnyWriteAccess: true,
+    canWriteProject: () => true,
+  }),
+}));
+
 import {
   mockApis,
   renderInTestApp,
@@ -26,50 +46,23 @@ import {
 } from '@backstage/test-utils';
 import { ProjectList } from './ProjectList';
 import { discoveryApiRef, fetchApiRef } from '@backstage/core-plugin-api';
-import { screen, waitFor } from '@testing-library/react';
+import { permissionApiRef } from '@backstage/plugin-permission-react';
+import { screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { POLLING_INTERVAL_MS } from '@red-hat-developer-hub/backstage-plugin-x2a-common';
+
 import {
-  Project,
-  ProjectsGet200Response,
-} from '@red-hat-developer-hub/backstage-plugin-x2a-common';
-
-jest.mock('../../useSeedTestData', () => ({
-  useSeedTestData: jest.fn(),
-}));
-
-const createMockProjects = (count: number, offset: number = 0): Project[] => {
-  return Array.from({ length: count }, (_, i) => {
-    const index = offset + i;
-    return {
-      id: `project-${index}`,
-      name: `Project ${index}`,
-      abbreviation: `P${index}`,
-      description: `Description ${index}`,
-      sourceRepoUrl: `https://github.com/org/source-repo${index}`,
-      targetRepoUrl: `https://github.com/org/target-repo${index}`,
-      sourceRepoBranch: `main${index}`,
-      targetRepoBranch: `main${index}`,
-      createdAt: new Date(
-        `2024-01-${String(index + 1).padStart(2, '0')}T00:00:00Z`,
-      ),
-      createdBy: `user:default/user${index}`,
-    };
-  });
-};
-
-const createMockResponse = (
-  items: Project[],
-  totalCount: number,
-): ProjectsGet200Response => ({
-  items,
-  totalCount,
-});
+  createMockProjects,
+  createMockResponse,
+  mockPermissionApi,
+} from '../../test-utils/projectListTestUtils';
 
 describe('ProjectList', () => {
   let fetchApiMock: jest.Mock;
   let discoveryApiMock: ReturnType<typeof mockApis.discovery>;
 
   beforeEach(() => {
+    jest.useFakeTimers();
     discoveryApiMock = mockApis.discovery({
       baseUrl: 'http://localhost:1234',
     });
@@ -77,6 +70,7 @@ describe('ProjectList', () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     jest.clearAllMocks();
   });
 
@@ -110,6 +104,7 @@ describe('ProjectList', () => {
           apis={[
             [fetchApiRef, { fetch: fetchApiMock }],
             [discoveryApiRef, discoveryApiMock],
+            [permissionApiRef, mockPermissionApi],
           ]}
         >
           <ProjectList />
@@ -189,7 +184,7 @@ describe('ProjectList', () => {
     });
 
     it('calls API with updated page when user navigates to next page', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
       const mockProjects = createMockProjects(10);
       const mockResponse = createMockResponse(mockProjects, 25);
 
@@ -229,7 +224,7 @@ describe('ProjectList', () => {
     });
 
     it('maintains sort order when changing pages', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
       const mockProjects = createMockProjects(10);
       const mockResponse = createMockResponse(mockProjects, 25);
 
@@ -258,7 +253,7 @@ describe('ProjectList', () => {
       const nameHeader = screen.getByText('Name');
       await user.click(nameHeader);
       await waitFor(() => {
-        expect(fetchApiMock).toHaveBeenCalled();
+        expect(screen.getByText('Project 0')).toBeInTheDocument();
       });
 
       fetchApiMock.mockClear();
@@ -276,6 +271,159 @@ describe('ProjectList', () => {
       expect(url).toContain('sort=name');
       expect(url).toContain('order=desc');
       expect(url).toContain('page=1');
+    });
+  });
+
+  describe('polling', () => {
+    it('polls for new data after POLLING_INTERVAL_MS', async () => {
+      const mockProjects = createMockProjects(5);
+      const mockResponse = createMockResponse(mockProjects, 5);
+
+      fetchApiMock.mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      } as Response);
+
+      await renderInTestApp(
+        <TestApiProvider
+          apis={[
+            [fetchApiRef, { fetch: fetchApiMock }],
+            [discoveryApiRef, discoveryApiMock],
+          ]}
+        >
+          <ProjectList />
+        </TestApiProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Project 0')).toBeInTheDocument();
+      });
+
+      const initialCallCount = fetchApiMock.mock.calls.length;
+
+      act(() => {
+        jest.advanceTimersByTime(POLLING_INTERVAL_MS);
+      });
+
+      await waitFor(() => {
+        expect(fetchApiMock.mock.calls.length).toBeGreaterThan(
+          initialCallCount,
+        );
+      });
+    });
+
+    it('does not show loading indicator during polling refresh', async () => {
+      const mockProjects = createMockProjects(5);
+      const mockResponse = createMockResponse(mockProjects, 5);
+
+      fetchApiMock.mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      } as Response);
+
+      await renderInTestApp(
+        <TestApiProvider
+          apis={[
+            [fetchApiRef, { fetch: fetchApiMock }],
+            [discoveryApiRef, discoveryApiMock],
+          ]}
+        >
+          <ProjectList />
+        </TestApiProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Project 0')).toBeInTheDocument();
+      });
+
+      act(() => {
+        jest.advanceTimersByTime(POLLING_INTERVAL_MS);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      });
+      expect(screen.getByText('Project 0')).toBeInTheDocument();
+    });
+
+    it('updates data when the API returns new content', async () => {
+      const mockProjects = createMockProjects(2);
+      const mockResponse = createMockResponse(mockProjects, 2);
+
+      fetchApiMock.mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      } as Response);
+
+      await renderInTestApp(
+        <TestApiProvider
+          apis={[
+            [fetchApiRef, { fetch: fetchApiMock }],
+            [discoveryApiRef, discoveryApiMock],
+          ]}
+        >
+          <ProjectList />
+        </TestApiProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Project 0')).toBeInTheDocument();
+      });
+
+      const updatedProjects = createMockProjects(2, 10);
+      const updatedResponse = createMockResponse(updatedProjects, 2);
+      fetchApiMock.mockResolvedValue({
+        ok: true,
+        json: async () => updatedResponse,
+      } as Response);
+
+      act(() => {
+        jest.advanceTimersByTime(POLLING_INTERVAL_MS);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Project 10')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('Project 0')).not.toBeInTheDocument();
+    });
+
+    it('recovers from error on next successful poll', async () => {
+      const mockProjects = createMockProjects(2);
+      const mockResponse = createMockResponse(mockProjects, 2);
+
+      fetchApiMock.mockRejectedValueOnce(new Error('Temporary failure'));
+
+      await renderInTestApp(
+        <TestApiProvider
+          apis={[
+            [fetchApiRef, { fetch: fetchApiMock }],
+            [discoveryApiRef, discoveryApiMock],
+          ]}
+        >
+          <ProjectList />
+        </TestApiProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      });
+      expect(screen.getAllByText(/Temporary failure/).length).toBeGreaterThan(
+        0,
+      );
+
+      fetchApiMock.mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      } as Response);
+
+      // After first error, backoff = POLLING_INTERVAL_MS * 2
+      act(() => {
+        jest.advanceTimersByTime(POLLING_INTERVAL_MS * 2);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Project 0')).toBeInTheDocument();
+      });
     });
   });
 });

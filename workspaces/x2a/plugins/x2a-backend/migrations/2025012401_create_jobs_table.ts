@@ -31,7 +31,7 @@ export async function up(knex: Knex): Promise<void> {
       .string('status')
       .notNullable()
       .defaultTo('pending')
-      .checkIn(['pending', 'running', 'success', 'error']);
+      .checkIn(['pending', 'running', 'success', 'error', 'cancelled']);
     table
       .string('phase')
       .notNullable()
@@ -41,6 +41,7 @@ export async function up(knex: Knex): Promise<void> {
     table.text('telemetry'); // JSON-serialized Telemetry object
     table.string('k8s_job_name');
     table.string('callback_token');
+    table.string('commit_id').nullable();
     table
       .uuid('project_id')
       .notNullable()
@@ -67,7 +68,7 @@ export async function up(knex: Knex): Promise<void> {
   await knex.schema.createTable('artifacts', table => {
     table.uuid('id').primary();
     table.string('type').notNullable(); // The artifact type
-    table.string('value').notNullable(); // The artifact string value
+    table.text('value').notNullable(); // The artifact value - can be large content
     table
       .uuid('job_id')
       .notNullable()

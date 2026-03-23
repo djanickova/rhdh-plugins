@@ -28,6 +28,7 @@ import { ProjectsPostRequest } from '../models/ProjectsPostRequest.model';
 import { ProjectsProjectIdCollectArtifactsPost200Response } from '../models/ProjectsProjectIdCollectArtifactsPost200Response.model';
 import { ProjectsProjectIdCollectArtifactsPostRequest } from '../models/ProjectsProjectIdCollectArtifactsPostRequest.model';
 import { ProjectsProjectIdDelete200Response } from '../models/ProjectsProjectIdDelete200Response.model';
+import { ProjectsProjectIdModulesModuleIdCancelPostRequest } from '../models/ProjectsProjectIdModulesModuleIdCancelPostRequest.model';
 import { ProjectsProjectIdModulesModuleIdRunPostRequest } from '../models/ProjectsProjectIdModulesModuleIdRunPostRequest.model';
 import { ProjectsProjectIdModulesPostRequest } from '../models/ProjectsProjectIdModulesPostRequest.model';
 import { ProjectsProjectIdRunPost200Response } from '../models/ProjectsProjectIdRunPost200Response.model';
@@ -70,7 +71,10 @@ export type ProjectsProjectIdCollectArtifactsPost = {
     moduleId?: string;
     phase: MigrationPhase;
   };
-  response: ProjectsProjectIdCollectArtifactsPost200Response | void | void;
+  header: {
+    xCallbackSignature: string;
+  };
+  response: ProjectsProjectIdCollectArtifactsPost200Response | void | void | void;
 };
 /**
  * @public
@@ -93,11 +97,34 @@ export type ProjectsProjectIdGet = {
 /**
  * @public
  */
+export type ProjectsProjectIdLogGet = {
+  path: {
+    projectId: string;
+  };
+  query: {
+    streaming?: boolean;
+  };
+  response: string | void;
+};
+/**
+ * @public
+ */
 export type ProjectsProjectIdModulesGet = {
   path: {
     projectId: string;
   };
   response: Array<Module> | void;
+};
+/**
+ * @public
+ */
+export type ProjectsProjectIdModulesModuleIdCancelPost = {
+  path: {
+    projectId: string;
+    moduleId: string;
+  };
+  body: ProjectsProjectIdModulesModuleIdCancelPostRequest;
+  response: void | void | void;
 };
 /**
  * @public
@@ -166,7 +193,11 @@ export type EndpointMap = {
 
   '#get|/projects/{projectId}': ProjectsProjectIdGet;
 
+  '#get|/projects/{projectId}/log': ProjectsProjectIdLogGet;
+
   '#get|/projects/{projectId}/modules': ProjectsProjectIdModulesGet;
+
+  '#post|/projects/{projectId}/modules/{moduleId}/cancel': ProjectsProjectIdModulesModuleIdCancelPost;
 
   '#get|/projects/{projectId}/modules/{moduleId}': ProjectsProjectIdModulesModuleIdGet;
 

@@ -16,52 +16,34 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   Artifact,
-  MigrationPhase,
+  resolveScmProvider,
   Module,
-  ModulePhase,
   Project,
+  Job,
 } from '@red-hat-developer-hub/backstage-plugin-x2a-common';
 import { Link, Table, TableColumn } from '@backstage/core-components';
 import { useRouteRef } from '@backstage/core-plugin-api';
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
+import CancelIcon from '@material-ui/icons/Cancel';
 import { MaterialTableProps } from '@material-table/core/types';
 import Alert from '@material-ui/lab/Alert';
 import AlertTitle from '@material-ui/lab/AlertTitle';
 
+import { useScmHostMap } from '../../hooks/useScmHostMap';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useClientService } from '../../ClientService';
-import { Artifacts } from './Artifacts';
-import { humanizeDate } from '../tools';
-import { getAuthTokenDescriptor, useRepoAuthentication } from '../../repoAuth';
-import { ModuleStatusCell } from './ModuleStatusCell';
+import { Artifacts } from '../Artifacts';
+import { useRepoAuthentication } from '../../repoAuth';
+import { CurrentPhaseCell } from '../CurrentPhaseCell';
+import { ModuleStatusCell } from '../ModuleStatusCell';
+import { TimingCell } from './TimingCell';
 import { moduleRouteRef } from '../../routes';
-
-const getLastJob = (rowData: Module) => {
-  const phases: ('publish' | 'migrate' | 'analyze')[] = [
-    'publish',
-    'migrate',
-    'analyze',
-  ];
-  for (const phase of phases) {
-    if (rowData[phase]?.phase) {
-      return rowData[phase];
-    }
-  }
-  return undefined;
-};
-
-export const getNextPhase = (module: Module): ModulePhase | undefined => {
-  const lastJob = getLastJob(module);
-  const lastPhase: MigrationPhase = lastJob?.phase || 'init';
-
-  const nextPhases: Record<MigrationPhase, ModulePhase | undefined> = {
-    init: 'analyze',
-    analyze: 'migrate',
-    migrate: 'publish',
-    publish: undefined,
-  };
-  return nextPhases[lastPhase];
-};
+import {
+  canCancelPhase,
+  canRunNextPhase,
+  getLastPhaseReached,
+  getNextPhase,
+} from '../tools';
 
 const useColumns = ({
   targetRepoUrl,
@@ -73,15 +55,16 @@ const useColumns = ({
   const { t } = useTranslation();
   const modulePath = useRouteRef(moduleRouteRef);
 
-  const lastPhaseCell = useCallback(
-    (rowData: Module) => {
-      const lastPhase = getLastJob(rowData)?.phase || 'none';
-      return <div>{t(`module.phases.${lastPhase}`)}</div>;
-    },
-    [t],
+  const currentPhaseCell = useCallback((rowData: Module) => {
+    const lastJob = getLastPhaseReached(rowData);
+    return <CurrentPhaseCell phase={lastJob?.phase} />;
+  }, []);
+
+  const statusCell = useCallback(
+    (rowData: Module) => <ModuleStatusCell module={rowData} />,
+    [],
   );
 
-  // List the artifacts for the last phase
   const artifactsCell = useCallback(
     (module: Module) => {
       const artifacts: Artifact[] = [];
@@ -99,28 +82,10 @@ const useColumns = ({
     [targetRepoUrl, targetRepoBranch],
   );
 
-  const startedAtCell = useCallback(
-    (rowData: Module) => {
-      const lastJob = getLastJob(rowData);
-      if (!lastJob) {
-        return <div>{t('module.phases.none')}</div>;
-      }
-      const formatted = humanizeDate(lastJob.startedAt);
-      return <div>{formatted}</div>;
-    },
-    [t],
-  );
-  const finishedAtCell = useCallback(
-    (rowData: Module) => {
-      const lastJob = getLastJob(rowData);
-      if (!lastJob?.finishedAt) {
-        return <div>{t('module.phases.none')}</div>;
-      }
-      const formatted = humanizeDate(lastJob.finishedAt);
-      return <div>{formatted}</div>;
-    },
-    [t],
-  );
+  const timingCell = useCallback((rowData: Module) => {
+    const lastJob = getLastPhaseReached(rowData);
+    return <TimingCell lastJob={lastJob} />;
+  }, []);
 
   const nameCell = useCallback(
     (rowData: Module) => {
@@ -141,45 +106,13 @@ const useColumns = ({
   return useMemo((): TableColumn<Module>[] => {
     return [
       { render: nameCell, title: t('module.name') },
-      {
-        field: 'status',
-        render: (rowData: Module) => (
-          <ModuleStatusCell
-            status={rowData.status}
-            errorDetails={rowData.errorDetails}
-          />
-        ),
-        title: t('module.status'),
-      },
+      { render: currentPhaseCell, title: t('module.currentPhase') },
+      { render: statusCell, title: t('module.status') },
       { field: 'sourcePath', title: t('module.sourcePath') },
-      { render: lastPhaseCell, title: t('module.lastPhase') },
       { render: artifactsCell, title: t('module.artifacts') },
-      { render: startedAtCell, title: t('module.startedAt') },
-      { render: finishedAtCell, title: t('module.finishedAt') },
+      { render: timingCell, title: t('module.lastUpdate') },
     ];
-  }, [
-    t,
-    lastPhaseCell,
-    artifactsCell,
-    startedAtCell,
-    finishedAtCell,
-    nameCell,
-  ]);
-};
-
-const canRunNextPhase = ({ module }: { module: Module }) => {
-  const nextPhase = getNextPhase(module);
-  if (!nextPhase) {
-    return false;
-  }
-
-  // TODO: Consider check whether we have all artifacts instead of just checking the last job status
-  const lastJob = getLastJob(module);
-  if (!lastJob || lastJob.status === 'success') {
-    return true;
-  }
-
-  return false;
+  }, [t, nameCell, currentPhaseCell, statusCell, artifactsCell, timingCell]);
 };
 
 export const ModuleTable = ({
@@ -193,6 +126,7 @@ export const ModuleTable = ({
 }) => {
   const { t } = useTranslation();
   const repoAuthentication = useRepoAuthentication();
+  const hostMap = useScmHostMap();
 
   const columns = useColumns({
     targetRepoUrl: project.targetRepoUrl,
@@ -211,65 +145,138 @@ export const ModuleTable = ({
         return;
       }
 
-      // Authenticate the repositories
-      const sourceRepoAuthToken = (
-        await repoAuthentication.authenticate([
-          getAuthTokenDescriptor({
-            repoUrl: project.sourceRepoUrl,
-            readOnly: true,
-          }),
-        ])
-      )[0].token;
-      const targetRepoAuthToken = (
-        await repoAuthentication.authenticate([
-          getAuthTokenDescriptor({
-            repoUrl: project.targetRepoUrl,
-            readOnly: false,
-          }),
-        ])
-      )[0].token;
+      try {
+        // Authenticate the repositories
+        const sourceRepoAuthToken = (
+          await repoAuthentication.authenticate([
+            resolveScmProvider(
+              project.sourceRepoUrl,
+              hostMap,
+            ).getAuthTokenDescriptor(true),
+          ])
+        )[0].token;
+        const targetRepoAuthToken = (
+          await repoAuthentication.authenticate([
+            resolveScmProvider(
+              project.targetRepoUrl,
+              hostMap,
+            ).getAuthTokenDescriptor(false),
+          ])
+        )[0].token;
 
-      // Call the phase-run action
-      const response =
-        await clientService.projectsProjectIdModulesModuleIdRunPost({
-          path: { projectId: module.projectId, moduleId: module.id },
-          body: {
-            phase: nextPhase,
-            sourceRepoAuth: {
-              token: sourceRepoAuthToken,
+        // Call the phase-run action
+        const response =
+          await clientService.projectsProjectIdModulesModuleIdRunPost({
+            path: { projectId: module.projectId, moduleId: module.id },
+            body: {
+              phase: nextPhase,
+              sourceRepoAuth: {
+                token: sourceRepoAuthToken,
+              },
+              targetRepoAuth: {
+                token: targetRepoAuthToken,
+              },
+              // skipping AAP credentials in favor of the app-config.yaml
             },
-            targetRepoAuth: {
-              token: targetRepoAuthToken,
-            },
-            // skipping AAP credentials in favor of the app-config.yaml
-          },
-        });
+          });
 
-      const responseData = await response.json();
-      if (!responseData.jobId) {
-        setError('Failed to run next phase for module');
+        const responseData = await response.json();
+        if (!responseData.jobId) {
+          setError(t('module.actions.runNextPhaseError'));
+        }
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('module.actions.runNextPhaseError'),
+        );
       }
 
       forceRefresh();
     },
     [
+      t,
       clientService,
       forceRefresh,
+      hostMap,
       repoAuthentication,
       project.sourceRepoUrl,
       project.targetRepoUrl,
     ],
   );
 
-  const actions: MaterialTableProps<Module>['actions'] = [
-    (rowData: Module) => ({
-      // Idea: this can be a drop-down to select the phase to run
-      icon: PlayArrowIcon,
-      onClick: () => handleRunNext(rowData),
-      tooltip: t('module.actions.runNextPhase'),
-      disabled: !canRunNextPhase({ module: rowData }),
-    }),
-  ];
+  const handleCancel = useCallback(
+    async (lastJob?: Job) => {
+      setError(undefined);
+      if (!lastJob?.moduleId || lastJob.phase === 'init') {
+        // this should never happen
+        return;
+      }
+      try {
+        const response =
+          await clientService.projectsProjectIdModulesModuleIdCancelPost({
+            path: { projectId: lastJob.projectId, moduleId: lastJob.moduleId },
+            body: { phase: lastJob.phase },
+          });
+        if (response.status !== 200) {
+          const body = await response
+            .json()
+            .catch(() => ({}) as { message?: string });
+          setError(body?.message || t('module.actions.cancelPhaseError'));
+        }
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('module.actions.cancelPhaseError'),
+        );
+      }
+      forceRefresh();
+    },
+    [clientService, forceRefresh, t],
+  );
+
+  const actions: MaterialTableProps<Module>['actions'] = useMemo(
+    () => [
+      (rowData: Module) => {
+        const nextPhase = getNextPhase(rowData);
+        let isHidden = false;
+        if (!nextPhase) {
+          isHidden = true;
+        }
+
+        return {
+          // Idea: this can be a drop-down to select the phase to run
+          icon: PlayArrowIcon,
+          onClick: () => handleRunNext(rowData),
+          tooltip: t('module.actions.runNextPhase' as any, {
+            phase: nextPhase ? t(`module.phases.${nextPhase}`) : '',
+          }),
+          disabled: !canRunNextPhase(rowData, project),
+          hidden: isHidden,
+        };
+      },
+
+      (rowData: Module) => {
+        const lastJob = getLastPhaseReached(rowData);
+
+        let isHidden = true;
+        if (lastJob) {
+          isHidden = !canCancelPhase(lastJob.status);
+        }
+
+        return {
+          icon: CancelIcon,
+          onClick: () => handleCancel(lastJob),
+          tooltip: t('module.actions.cancelPhase' as any, {
+            phase: lastJob?.phase ? t(`module.phases.${lastJob.phase}`) : '',
+          }),
+          hidden: isHidden,
+        };
+      },
+    ],
+    [t, handleRunNext, handleCancel, project],
+  );
 
   return (
     <>
