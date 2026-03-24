@@ -76,17 +76,6 @@ export const SCORECARD_THRESHOLD_RULE_COLOR_VALUES = Object.values(
 );
 
 /**
- * Default threshold configuration for boolean metrics
- * @public
- */
-export const DEFAULT_BOOLEAN_THRESHOLDS: ThresholdConfig = {
-  rules: [
-    { key: 'success', expression: '==true' },
-    { key: 'error', expression: '==false' },
-  ],
-};
-
-/**
  * Default threshold configuration for file check metrics
  * @public
  */
