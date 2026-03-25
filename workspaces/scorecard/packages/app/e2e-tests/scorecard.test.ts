@@ -27,6 +27,7 @@ import {
   emptyScorecardResponse,
   unavailableMetricResponse,
   invalidThresholdResponse,
+  fileCheckScorecardResponse,
   githubAggregatedResponse,
   jiraAggregatedResponse,
   emptyGithubAggregatedResponse,
@@ -185,6 +186,45 @@ test.describe('Scorecard Plugin Tests', () => {
       );
       await expect(errorLocator).toBeVisible();
       await scorecardPage.validateScorecardAriaFor(jiraMetric);
+
+      await runAccessibilityTests(page, testInfo);
+    });
+
+    test('Verify file check metrics display correctly', async ({
+      browser,
+    }, testInfo) => {
+      await mockScorecardResponse(page, fileCheckScorecardResponse);
+
+      await catalogPage.openCatalog();
+      await catalogPage.openComponent('Red Hat Developer Hub');
+      await scorecardPage.openTab();
+
+      await expect(page.getByText('GitHub File: README.md')).toBeVisible();
+      await expect(page.getByText('GitHub File: CODEOWNERS')).toBeVisible();
+
+      const readmeCard = page
+        .locator('[role="article"]')
+        .filter({ hasText: 'GitHub File: README.md' })
+        .first();
+      await expect(readmeCard.getByText('true')).toBeVisible();
+      await expect(
+        readmeCard.getByText(translations.thresholds.exist),
+      ).toBeVisible();
+      await expect(
+        readmeCard.getByText(translations.thresholds.missing),
+      ).toBeVisible();
+
+      const codeownersCard = page
+        .locator('[role="article"]')
+        .filter({ hasText: 'GitHub File: CODEOWNERS' })
+        .first();
+      await expect(codeownersCard.getByText('false')).toBeVisible();
+      await expect(
+        codeownersCard.getByText(translations.thresholds.exist),
+      ).toBeVisible();
+      await expect(
+        codeownersCard.getByText(translations.thresholds.missing),
+      ).toBeVisible();
 
       await runAccessibilityTests(page, testInfo);
     });
