@@ -149,7 +149,7 @@ const mountPoints: HomePageCardMountPoint[] = [
   {
     Component: ScorecardHomepageCard as ComponentType,
     config: {
-      id: 'scorecard-github.files_check.readme-correct',
+      id: 'scorecard-github.files_check.readme',
       title: 'Scorecard: README file exists',
       cardLayout: {
         width: {
@@ -172,14 +172,14 @@ const mountPoints: HomePageCardMountPoint[] = [
         xxs: { w: 4, h: 6 },
       },
       props: {
-        metricId: 'github.files_check.readme-correct',
+        metricId: 'github.files_check.readme',
       },
     },
   },
   {
     Component: ScorecardHomepageCard as ComponentType,
     config: {
-      id: 'scorecard-github.files_check.i18guide-correct',
+      id: 'scorecard-github.files_check.i18guide',
       title: 'Scorecard: i18n guide file exists',
       cardLayout: {
         width: {
@@ -202,7 +202,7 @@ const mountPoints: HomePageCardMountPoint[] = [
         xxs: { w: 4, h: 6, x: 4 },
       },
       props: {
-        metricId: 'github.files_check.i18guide-correct',
+        metricId: 'github.files_check.i18guide',
       },
     },
   },
@@ -243,8 +243,8 @@ const mountPoints: HomePageCardMountPoint[] = [
               enum: [
                 'jira.open_issues',
                 'github.open_prs',
-                'github.files_check.readme-correct',
-                'github.files_check.i18guide-correct',
+                'github.files_check.readme',
+                'github.files_check.i18guide',
               ],
             },
           },
