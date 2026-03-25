@@ -37,6 +37,8 @@ export const scorecardTranslationRef: TranslationRef<
     readonly 'thresholds.success': string;
     readonly 'thresholds.error': string;
     readonly 'thresholds.warning': string;
+    readonly 'thresholds.exist': string;
+    readonly 'thresholds.missing': string;
     readonly 'thresholds.noEntities': string;
     readonly 'thresholds.entities_one': string;
     readonly 'thresholds.entities_other': string;

@@ -35,7 +35,7 @@ export type AggregatedMetricValue = {
 };
 
 // @public
-export const DEFAULT_BOOLEAN_THRESHOLDS: ThresholdConfig;
+export const DEFAULT_FILE_CHECK_THRESHOLDS: ThresholdConfig;
 
 // @public
 export const DEFAULT_NUMBER_THRESHOLDS: ThresholdConfig;
