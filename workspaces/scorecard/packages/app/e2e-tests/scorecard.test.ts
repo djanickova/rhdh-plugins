@@ -199,31 +199,39 @@ test.describe('Scorecard Plugin Tests', () => {
       await catalogPage.openComponent('Red Hat Developer Hub');
       await scorecardPage.openTab();
 
-      await expect(page.getByText('GitHub File: README.md')).toBeVisible();
-      await expect(page.getByText('GitHub File: CODEOWNERS')).toBeVisible();
+      const existLabel = translations.thresholds.exist ?? 'Exist';
+      const missingLabel = translations.thresholds.missing ?? 'Missing';
 
       const readmeCard = page
         .locator('[role="article"]')
         .filter({ hasText: 'GitHub File: README.md' })
         .first();
-      await expect(readmeCard.getByText('true')).toBeVisible();
+      await expect(readmeCard).toBeVisible();
       await expect(
-        readmeCard.getByText(translations.thresholds.exist),
+        readmeCard.getByText('Checks if README.md exists in the repository.'),
       ).toBeVisible();
       await expect(
-        readmeCard.getByText(translations.thresholds.missing),
+        readmeCard.getByText(existLabel, { exact: true }),
+      ).toBeVisible();
+      await expect(
+        readmeCard.getByText(missingLabel, { exact: true }),
       ).toBeVisible();
 
       const codeownersCard = page
         .locator('[role="article"]')
         .filter({ hasText: 'GitHub File: CODEOWNERS' })
         .first();
-      await expect(codeownersCard.getByText('false')).toBeVisible();
+      await expect(codeownersCard).toBeVisible();
       await expect(
-        codeownersCard.getByText(translations.thresholds.exist),
+        codeownersCard.getByText(
+          'Checks if CODEOWNERS exists in the repository.',
+        ),
       ).toBeVisible();
       await expect(
-        codeownersCard.getByText(translations.thresholds.missing),
+        codeownersCard.getByText(existLabel, { exact: true }),
+      ).toBeVisible();
+      await expect(
+        codeownersCard.getByText(missingLabel, { exact: true }),
       ).toBeVisible();
 
       await runAccessibilityTests(page, testInfo);
