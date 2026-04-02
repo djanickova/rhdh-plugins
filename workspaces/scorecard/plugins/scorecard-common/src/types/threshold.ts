@@ -74,22 +74,3 @@ export const ScorecardThresholdRuleColors = {
 export const SCORECARD_THRESHOLD_RULE_COLOR_VALUES = Object.values(
   ScorecardThresholdRuleColors,
 );
-
-/**
- * Default threshold configuration for file check metrics
- * @public
- */
-export const DEFAULT_FILE_CHECK_THRESHOLDS: ThresholdConfig = {
-  rules: [
-    {
-      key: 'exist',
-      expression: '==true',
-      color: ScorecardThresholdRuleColors.SUCCESS,
-    },
-    {
-      key: 'missing',
-      expression: '==false',
-      color: ScorecardThresholdRuleColors.ERROR,
-    },
-  ],
-};

@@ -18,10 +18,10 @@ import type { Config } from '@backstage/config';
 import { getEntitySourceLocation, type Entity } from '@backstage/catalog-model';
 import { CATALOG_FILTER_EXISTS } from '@backstage/catalog-client';
 import {
-  DEFAULT_FILE_CHECK_THRESHOLDS,
   Metric,
   ThresholdConfig,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
+import { DEFAULT_FILE_CHECK_THRESHOLDS } from './GithubConfig';
 import { MetricProvider } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import { GithubClient } from '../github/GithubClient';
 import { getRepositoryInformationFromEntity } from '../github/utils';

@@ -18,7 +18,7 @@ import { ConfigReader } from '@backstage/config';
 import type { Entity } from '@backstage/catalog-model';
 import { GithubFilesProvider } from './GithubFilesProvider';
 import { GithubClient } from '../github/GithubClient';
-import { DEFAULT_FILE_CHECK_THRESHOLDS } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
+import { DEFAULT_FILE_CHECK_THRESHOLDS } from './GithubConfig';
 
 jest.mock('@backstage/catalog-model', () => ({
   ...jest.requireActual('@backstage/catalog-model'),
