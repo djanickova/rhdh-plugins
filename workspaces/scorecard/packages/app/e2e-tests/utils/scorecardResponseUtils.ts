@@ -15,7 +15,7 @@
  */
 import {
   DEFAULT_NUMBER_THRESHOLDS,
-  DEFAULT_FILE_CHECK_THRESHOLDS,
+  ScorecardThresholdRuleColors,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 
 export const customScorecardResponse = [
@@ -278,7 +278,20 @@ export const fileCheckScorecardResponse = [
       value: true,
       timestamp: '2025-09-08T09:08:55.629Z',
       thresholdResult: {
-        definition: DEFAULT_FILE_CHECK_THRESHOLDS,
+        definition: {
+          rules: [
+            {
+              key: 'exist',
+              expression: '==true',
+              color: ScorecardThresholdRuleColors.SUCCESS,
+            },
+            {
+              key: 'missing',
+              expression: '==false',
+              color: ScorecardThresholdRuleColors.ERROR,
+            },
+          ],
+        },
         status: 'success',
         evaluation: 'exist',
       },
@@ -297,7 +310,20 @@ export const fileCheckScorecardResponse = [
       value: false,
       timestamp: '2025-09-08T09:08:55.629Z',
       thresholdResult: {
-        definition: DEFAULT_FILE_CHECK_THRESHOLDS,
+        definition: {
+          rules: [
+            {
+              key: 'exist',
+              expression: '==true',
+              color: ScorecardThresholdRuleColors.SUCCESS,
+            },
+            {
+              key: 'missing',
+              expression: '==false',
+              color: ScorecardThresholdRuleColors.ERROR,
+            },
+          ],
+        },
         status: 'success',
         evaluation: 'missing',
       },

@@ -20,7 +20,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 import {
   DEFAULT_NUMBER_THRESHOLDS,
-  DEFAULT_FILE_CHECK_THRESHOLDS,
+  ScorecardThresholdRuleColors,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import { getStatusConfig, SCORECARD_ERROR_STATE_COLOR } from '..';
 
@@ -168,7 +168,18 @@ describe('statusUtils', () => {
           evaluation: 'missing',
           thresholdStatus: 'success',
           metricStatus: 'success',
-          thresholdRules: DEFAULT_FILE_CHECK_THRESHOLDS.rules,
+          thresholdRules: [
+            {
+              key: 'exist',
+              expression: '==true',
+              color: ScorecardThresholdRuleColors.SUCCESS,
+            },
+            {
+              key: 'missing',
+              expression: '==false',
+              color: ScorecardThresholdRuleColors.ERROR,
+            },
+          ],
         });
 
         expect(result).toEqual({
@@ -182,7 +193,18 @@ describe('statusUtils', () => {
           evaluation: 'exist',
           thresholdStatus: 'success',
           metricStatus: 'success',
-          thresholdRules: DEFAULT_FILE_CHECK_THRESHOLDS.rules,
+          thresholdRules: [
+            {
+              key: 'exist',
+              expression: '==true',
+              color: ScorecardThresholdRuleColors.SUCCESS,
+            },
+            {
+              key: 'missing',
+              expression: '==false',
+              color: ScorecardThresholdRuleColors.ERROR,
+            },
+          ],
         });
 
         expect(result).toEqual({
