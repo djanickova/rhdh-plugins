@@ -117,8 +117,16 @@ export const EmptyStatePanel = ({
   const titleKey = `metric.${metricId}.title`;
   const descriptionKey = `metric.${metricId}.description`;
 
-  const cardTitle = t(titleKey as any, {});
-  const cardDescription = t(descriptionKey as any, {});
+  let cardTitle = t(titleKey as any, {});
+  let cardDescription = t(descriptionKey as any, {});
+
+  if (metricId.startsWith('github.files_check.')) {
+    const name = metricId.substring('github.files_check.'.length);
+    cardTitle = t('metric.github.files_check.title' as any, { name });
+    cardDescription = t('metric.github.files_check.description' as any, {
+      name,
+    });
+  }
 
   const statusConfig = getStatusConfig({
     evaluation: 'error',
