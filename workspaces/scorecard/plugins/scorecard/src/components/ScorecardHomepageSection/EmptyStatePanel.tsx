@@ -25,6 +25,7 @@ import {
   getYOffsetForCenterLabel,
   getHeightForCenterLabel,
   resolveStatusColor,
+  resolveMetricTranslation,
 } from '../../utils';
 import CustomLegend from '../Scorecard/CustomLegend';
 import { ErrorTooltip } from '../Common/ErrorTooltip';
@@ -114,19 +115,8 @@ export const EmptyStatePanel = ({
   const [isLabelHovered, setIsLabelHovered] = useState(false);
   const [isInsidePieCircle, setIsInsidePieCircle] = useState(false);
 
-  const titleKey = `metric.${metricId}.title`;
-  const descriptionKey = `metric.${metricId}.description`;
-
-  let cardTitle = t(titleKey as any, {});
-  let cardDescription = t(descriptionKey as any, {});
-
-  if (metricId.startsWith('github.files_check.')) {
-    const name = metricId.substring('github.files_check.'.length);
-    cardTitle = t('metric.github.files_check.title' as any, { name });
-    cardDescription = t('metric.github.files_check.description' as any, {
-      name,
-    });
-  }
+  const cardTitle = resolveMetricTranslation(t, metricId, 'title');
+  const cardDescription = resolveMetricTranslation(t, metricId, 'description');
 
   const statusConfig = getStatusConfig({
     evaluation: 'error',

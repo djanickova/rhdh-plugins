@@ -21,3 +21,4 @@ export {
 export { getThresholdRuleColor, resolveStatusColor } from './colorUtils';
 export { SCORECARD_ERROR_STATE_COLOR } from './constants';
 export { getStatusConfig } from './statusUtils';
+export { resolveMetricTranslation } from './translationUtils';
