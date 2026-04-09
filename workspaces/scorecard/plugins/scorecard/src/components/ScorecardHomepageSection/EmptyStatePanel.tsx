@@ -104,10 +104,14 @@ export const EmptyStatePanel = ({
   label,
   metricId,
   tooltipContent,
+  fallbackTitle,
+  fallbackDescription,
 }: {
   label: string;
   metricId: string;
   tooltipContent: string;
+  fallbackTitle?: string;
+  fallbackDescription?: string;
 }) => {
   const theme = useTheme();
   const { t } = useTranslation();
@@ -115,8 +119,18 @@ export const EmptyStatePanel = ({
   const [isLabelHovered, setIsLabelHovered] = useState(false);
   const [isInsidePieCircle, setIsInsidePieCircle] = useState(false);
 
-  const cardTitle = resolveMetricTranslation(t, metricId, 'title');
-  const cardDescription = resolveMetricTranslation(t, metricId, 'description');
+  const cardTitle = resolveMetricTranslation(
+    t,
+    metricId,
+    'title',
+    fallbackTitle,
+  );
+  const cardDescription = resolveMetricTranslation(
+    t,
+    metricId,
+    'description',
+    fallbackDescription,
+  );
 
   const statusConfig = getStatusConfig({
     evaluation: 'error',

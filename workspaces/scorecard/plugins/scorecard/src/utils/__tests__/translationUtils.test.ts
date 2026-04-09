@@ -121,4 +121,60 @@ describe('resolveMetricTranslation', () => {
       'metric.single.title',
     );
   });
+
+  it('returns fallback when no translation matches and fallback is provided', () => {
+    const t = createMockT({});
+
+    expect(
+      resolveMetricTranslation(
+        t as any,
+        'unknown.metric',
+        'title',
+        'API Title',
+      ),
+    ).toBe('API Title');
+  });
+
+  it('returns fallback for 3-segment ID when neither exact nor parent matches', () => {
+    const t = createMockT({});
+
+    expect(
+      resolveMetricTranslation(
+        t as any,
+        'unknown.metric.instance',
+        'description',
+        'API description text',
+      ),
+    ).toBe('API description text');
+  });
+
+  it('prefers translation over fallback when translation exists', () => {
+    const t = createMockT({
+      'metric.github.open_prs.title': 'GitHub open PRs',
+    });
+
+    expect(
+      resolveMetricTranslation(
+        t as any,
+        'github.open_prs',
+        'title',
+        'Fallback Title',
+      ),
+    ).toBe('GitHub open PRs');
+  });
+
+  it('prefers parent translation over fallback', () => {
+    const t = createMockT({
+      'metric.github.files_check.title': 'GitHub file check: {{name}}',
+    });
+
+    expect(
+      resolveMetricTranslation(
+        t as any,
+        'github.files_check.readme',
+        'title',
+        'Fallback Title',
+      ),
+    ).toBe('GitHub file check: readme');
+  });
 });

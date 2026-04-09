@@ -30,12 +30,14 @@ type ScorecardTranslationFunction = TranslationFunction<
  *    the first two segments and tries metric.base.field with name = suffix.
  *    E.g. github.files_check.readme tries metric.github.files_check.title
  *    with name = readme.
- * 3. Falls back to the raw translation key if none of the above are found.
+ * 3. Falls back to `fallback` when provided, otherwise returns the raw
+ *    translation key.
  */
 export function resolveMetricTranslation(
   t: ScorecardTranslationFunction,
   metricId: string,
   field: 'title' | 'description',
+  fallback?: string,
 ): string {
   const key = `metric.${metricId}.${field}`;
   const translated = t(key as any, {});
@@ -50,5 +52,5 @@ export function resolveMetricTranslation(
     if (parentTranslated !== parentKey) return parentTranslated;
   }
 
-  return translated;
+  return fallback ?? translated;
 }
