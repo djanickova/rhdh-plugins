@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
 
@@ -119,17 +119,14 @@ export const EmptyStatePanel = ({
   const [isLabelHovered, setIsLabelHovered] = useState(false);
   const [isInsidePieCircle, setIsInsidePieCircle] = useState(false);
 
-  const cardTitle = resolveMetricTranslation(
-    t,
-    metricId,
-    'title',
-    fallbackTitle,
+  const cardTitle = useMemo(
+    () => resolveMetricTranslation(t, metricId, 'title', fallbackTitle),
+    [t, metricId, fallbackTitle],
   );
-  const cardDescription = resolveMetricTranslation(
-    t,
-    metricId,
-    'description',
-    fallbackDescription,
+  const cardDescription = useMemo(
+    () =>
+      resolveMetricTranslation(t, metricId, 'description', fallbackDescription),
+    [t, metricId, fallbackDescription],
   );
 
   const statusConfig = getStatusConfig({
