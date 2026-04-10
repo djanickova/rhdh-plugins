@@ -202,14 +202,21 @@ test.describe('Scorecard Plugin Tests', () => {
       const existLabel = translations.thresholds.exist ?? 'Exist';
       const missingLabel = translations.thresholds.missing ?? 'Missing';
 
+      const readmeTitle = evaluateMessage(
+        translations.metric['github.files_check'].title,
+        'readme',
+      );
+      const readmeDescription = evaluateMessage(
+        translations.metric['github.files_check'].description,
+        'readme',
+      );
+
       const readmeCard = page
         .locator('[role="article"]')
-        .filter({ hasText: 'GitHub File: README.md' })
+        .filter({ hasText: readmeTitle })
         .first();
       await expect(readmeCard).toBeVisible();
-      await expect(
-        readmeCard.getByText('Checks if README.md exists in the repository.'),
-      ).toBeVisible();
+      await expect(readmeCard.getByText(readmeDescription)).toBeVisible();
       await expect(
         readmeCard.getByText(existLabel, { exact: true }),
       ).toBeVisible();
@@ -217,15 +224,22 @@ test.describe('Scorecard Plugin Tests', () => {
         readmeCard.getByText(missingLabel, { exact: true }),
       ).toBeVisible();
 
+      const codeownersTitle = evaluateMessage(
+        translations.metric['github.files_check'].title,
+        'codeowners',
+      );
+      const codeownersDescription = evaluateMessage(
+        translations.metric['github.files_check'].description,
+        'codeowners',
+      );
+
       const codeownersCard = page
         .locator('[role="article"]')
-        .filter({ hasText: 'GitHub File: CODEOWNERS' })
+        .filter({ hasText: codeownersTitle })
         .first();
       await expect(codeownersCard).toBeVisible();
       await expect(
-        codeownersCard.getByText(
-          'Checks if CODEOWNERS exists in the repository.',
-        ),
+        codeownersCard.getByText(codeownersDescription),
       ).toBeVisible();
       await expect(
         codeownersCard.getByText(existLabel, { exact: true }),
